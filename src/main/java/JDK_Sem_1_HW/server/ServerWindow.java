@@ -1,5 +1,6 @@
 package JDK_Sem_1_HW.server;
 
+import JDK_Sem_1_HW.client.Client;
 import JDK_Sem_1_HW.client.ClientGUI;
 
 import javax.swing.*;
@@ -12,7 +13,7 @@ import java.util.List;
 
 
 
-public class ServerWindow extends JFrame {
+public class ServerWindow extends JFrame implements Server{
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
 
@@ -20,7 +21,8 @@ public class ServerWindow extends JFrame {
     private final JButton btnStop = new JButton("Stop");
     private final JTextArea log = new JTextArea();
 
-    private boolean isServerWorking;
+    private boolean isServerWorking = false;
+
 
     private File logFile;
 
@@ -28,11 +30,7 @@ public class ServerWindow extends JFrame {
         new ServerWindow();
     }
 
-    public boolean isServerWorking() {
-        return isServerWorking;
-    }
-
-    private List<ClientGUI> clientGUIList = new ArrayList<>();
+    private List<Client> connectedClients = new ArrayList<>();
 
     public ServerWindow(){
         isServerWorking = false;
@@ -92,29 +90,32 @@ public class ServerWindow extends JFrame {
         log.append(message + "\n");
     }
 
-    public void clientConnected (ClientGUI clientName){
-        logText(clientName.getTfLogin() + " подключился к беседе");
-        clientGUIList.add(clientName);
-        logText(getChatHistory());
-    }
-
-    public void sendMessage (String clientName, String message){
-        logText(clientName + ": " + message);
-        for(ClientGUI clientGUI : clientGUIList){
-            clientGUI.receiveMessage(clientName, message);
+    @Override
+    public boolean connectUser(Client client) {
+        if(isServerWorking) {
+            connectedClients.add(client);
+            logText(client.getName() + " подключился к беседе");
+            String history = getHistory();
+            if (!history.isEmpty()) {
+                client.answerFromServer(history);
+            }
         }
-        logMessage(clientName, message);
+        return true;
     }
 
-    public void logMessage(String name, String message){
-        try(FileWriter writer = new FileWriter(logFile, true)){
-            writer.write(name + ": "+ message + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
+    @Override
+    public void sendMessage(String message) {
+        if(isServerWorking) {
+            logText(message);
+            for (Client client : connectedClients) {
+                client.answerFromServer(message);
+            }
+            logMessage(message);
         }
     }
 
-    public String getChatHistory() {
+    @Override
+    public String getHistory() {
         StringBuilder history = new StringBuilder();
         try(BufferedReader reader = new BufferedReader(new FileReader(logFile))){
             String line;
@@ -126,5 +127,19 @@ public class ServerWindow extends JFrame {
         }
         return history.toString();
     }
+
+    @Override
+    public boolean isServerWorking() {
+        return isServerWorking;
+    }
+
+    public void logMessage(String message){
+        try(FileWriter writer = new FileWriter(logFile, true)){
+            writer.write("+ message \n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 }

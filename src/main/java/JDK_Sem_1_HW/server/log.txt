@@ -6,3 +6,8 @@ Dima: Hi
 Dima: Ого, что вы написали!
 Введите имя: 111
 Введите имя: 222
++ message 
++ message 
++ message 
++ message 
++ message 

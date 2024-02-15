@@ -6,54 +6,62 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 
-public class ClientGUI extends JFrame {
+public class ClientGUI extends JFrame implements View{
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
 
-    private final JTextArea log = new JTextArea();
+    private Client client;
 
-    private final JPanel panTop = new JPanel(new GridLayout(2,3));
-    private final JTextField tfIPAddress = new JTextField("127.0.0.1");
-    private final JTextField tfPort = new JTextField("8189");
-    private final JLabel emptyField = new JLabel();
-    private final JTextField tfLogin = new JTextField("Введите имя");
-    private final JPasswordField tfPassword = new JPasswordField("1234");
-    private final JButton btnLogin = new JButton("Login");
-
-    private final JPanel panBottom = new JPanel(new BorderLayout());
-    private final JTextField tfMessage = new JTextField();
-    private final JButton btnSend = new JButton("Send");
-    private boolean isConnected;
-
-    public boolean isConnected() {
-        return isConnected;
-    }
-
-    public String getTfLogin() {
-        return tfLogin.getText();
-    }
+    JTextArea log;
+    JTextField tfIPAddress,tfPort,tfLogin, tfMessage;
+    JPasswordField tfPassword;
+    JButton btnLogin,btnSend;
+    JPanel panTop, panBottom;
+    JLabel emptyField;
 
     public ClientGUI(ServerWindow serverWindow){
+        settings(serverWindow);
+        createPanel();
+
+        setVisible(true);
+    }
+
+    private void settings(ServerWindow serverWindow){
+        setSize(WIDTH,HEIGHT);
+        setTitle("Chat Client");
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        client = new Client(this, serverWindow);
+    }
+
+    public void sendMessage(){
+        client.sendMessage(tfMessage.getText());
+        tfMessage.setText("");
+    }
+
+    public void createPanel(){
+        add(createHeaderPanel(), BorderLayout.NORTH);
+        add(createLog());
+        add(createFooter(), BorderLayout.SOUTH);
+    }
+
+    private Component createHeaderPanel(){
+        panTop = new JPanel(new GridLayout(2,3));
+        tfIPAddress = new JTextField("127.0.0.1");
+        tfPort = new JTextField("8189");
+        emptyField = new JLabel();
+        tfLogin = new JTextField("Введите имя");
+        tfPassword = new JPasswordField("1234");
+        btnLogin = new JButton("Login");
         btnLogin.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(serverWindow.isServerWorking()){
-                    isConnected = true;
-                    serverWindow.clientConnected(ClientGUI.this);
-                    logText("Вы успешно подключились!");
-                    logText(serverWindow.getChatHistory());
-                }else {
-                    logText("Не удалось подключиться");
-                }
+                client.connectToServer(tfLogin.getText());
             }
         });
-
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setSize(WIDTH,HEIGHT);
-        setTitle("Chat Client");
-
         panTop.add(tfIPAddress);
         panTop.add(tfPort);
         panTop.add(emptyField);
@@ -61,56 +69,46 @@ public class ClientGUI extends JFrame {
         panTop.add(tfPassword);
         panTop.add(btnLogin);
 
-        add(panTop, BorderLayout.NORTH);
+        return panTop;
+    }
 
-        panBottom.add(tfMessage, BorderLayout.CENTER);
-        panBottom.add(btnSend, BorderLayout.SOUTH);
-
-        add(panBottom, BorderLayout.SOUTH);
-
+    private Component createLog(){
+        log = new JTextArea();
         log.setEditable(false);
-        JScrollPane scrolLog = new JScrollPane(log);
-        add(scrolLog, BorderLayout.CENTER);
+        return new JScrollPane(log);
+    }
 
+    private Component createFooter(){
+        panBottom = new JPanel(new BorderLayout());
+        tfMessage = new JTextField();
+        tfMessage.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (e.getKeyChar() == '\n'){
+                    sendMessage();
+                }
+            }
+        });
+        btnSend = new JButton("Send");
         btnSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (isConnected) {
-                    String message = tfMessage.getText();
-                    if (!message.isEmpty()) {
-                        serverWindow.sendMessage(tfLogin.getText(), message);
-                        tfMessage.setText("");
-                    }
-                }
+                sendMessage();
             }
         });
-        tfMessage.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isConnected) {
-                    String message = tfMessage.getText();
-                    if (!message.isEmpty()) {
-                        serverWindow.sendMessage(tfLogin.getText(), message);
-                        tfMessage.setText("");
-                    }
-                }
-            }
-        });
+        panBottom.add(tfMessage);
+        panBottom.add(btnSend, BorderLayout.EAST);
 
-        setVisible(true);
+        return panBottom;
     }
 
-    public static void main(String[] args) {
-        new ClientGUI(new ServerWindow());
+    @Override
+    public void sendMessage(String message) {
+        log.append(message);
     }
 
-    private void logText (String message){
-        log.append(message + "\n");
+    @Override
+    public void connectedToServer() {
+
     }
-
-    public void receiveMessage (String clientNmae, String message) {
-        logText(clientNmae + ": " + message);
-    }
-
-
 }
